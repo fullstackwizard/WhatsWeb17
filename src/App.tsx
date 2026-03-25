@@ -1,1029 +1,1311 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  MessageSquare, 
-  TrendingUp, 
-  Clock, 
+  Smartphone, 
   Users, 
-  CheckCircle2, 
-  ArrowRight, 
+  BrainCircuit, 
+  Settings, 
+  Play, 
+  Plus, 
+  Target, 
   Zap, 
-  ShieldCheck, 
+  MessageSquare, 
   BarChart3, 
-  Smartphone,
-  ChevronDown,
-  ChevronUp,
-  Star,
-  Target,
-  Settings,
-  Rocket,
-  BrainCircuit,
-  Loader2,
-  AlertCircle
+  ShieldCheck, 
+  LogOut, 
+  AlertCircle, 
+  CheckCircle2, 
+  RefreshCw, 
+  Copy, 
+  ExternalLink, 
+  Search, 
+  Filter, 
+  MoreVertical, 
+  Send, 
+  Bot, 
+  User, 
+  ChevronRight, 
+  Trash2, 
+  Save, 
+  X, 
+  QrCode, 
+  Globe, 
+  Key, 
+  Database, 
+  Webhook, 
+  Cpu, 
+  LayoutDashboard, 
+  History, 
+  HelpCircle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-
-const handleCheckout = async (planName: string, amount: number) => {
-  try {
-    const response = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planName, amount }),
-    });
-    const data = await response.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert("Erro ao criar sessão de pagamento.");
-    }
-  } catch (error) {
-    console.error("Checkout error:", error);
-    alert("Erro ao conectar com o servidor de pagamento.");
-  }
-};
-
-const WhatsAppAutomation = () => {
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  useEffect(() => {
-    const pollMessages = async () => {
-      if (isProcessing) return;
-      
-      try {
-        const response = await fetch('/api/whatsapp/pending');
-        const pendingMessages = await response.json();
-
-        if (pendingMessages && pendingMessages.length > 0) {
-          setIsProcessing(true);
-          for (const msg of pendingMessages) {
-            console.log("Processing message from:", msg.from);
-            
-            // 1. Use Gemini to generate a response
-            const model = "gemini-3-flash-preview";
-            const prompt = `Você é um assistente de vendas automático para a empresa atendemosWhats. 
-            O cliente disse: "${msg.text}". 
-            Responda de forma educada, vendedora e direta, tentando qualificar o lead. 
-            Não use mais de 200 caracteres.`;
-            
-            const result = await ai.models.generateContent({
-              model,
-              contents: prompt,
-            });
-            
-            const replyText = result.text || "Olá! Como posso te ajudar?";
-
-            // 2. Send the response back via WhatsApp
-            await fetch('/api/whatsapp/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to: msg.from, text: replyText }),
-            });
-
-            // 3. Mark as processed
-            await fetch('/api/whatsapp/mark-processed', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: msg.id }),
-            });
-          }
-          setIsProcessing(false);
-        }
-      } catch (error) {
-        console.error("Automation error:", error);
-        setIsProcessing(false);
-      }
-    };
-
-    const interval = setInterval(pollMessages, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
-  }, [isProcessing]);
-
-  return null; // This is a background worker component
-};
-
-const Logo = ({ className = "" }: { className?: string }) => (
-  <div className={`flex items-center gap-2 ${className}`}>
-    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center font-black text-brand-dark text-lg shadow-sm">
-      W
-    </div>
-    <span className="font-bold text-xl tracking-tight text-slate-900">atendemos<span className="text-primary-dark">Whats</span></span>
-  </div>
-);
-
-const Navbar = ({ onLogin }: { onLogin: () => void }) => (
-  <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex justify-between h-16 items-center">
-        <Logo />
-        <div className="hidden md:flex items-center gap-8">
-          <a href="#beneficios" className="text-sm font-medium text-slate-600 hover:text-primary-dark transition-colors">Benefícios</a>
-          <a href="#planos" className="text-sm font-medium text-slate-600 hover:text-primary-dark transition-colors">Planos</a>
-          <a href="#processo" className="text-sm font-medium text-slate-600 hover:text-primary-dark transition-colors">Como Funciona</a>
-          <button 
-            onClick={onLogin}
-            className="bg-primary hover:bg-primary-dark text-brand-dark px-5 py-2 rounded-full text-sm font-bold transition-all shadow-lg shadow-primary/20"
-          >
-            Acessar Painel
-          </button>
-        </div>
-      </div>
-    </div>
-  </nav>
-);
-
-const Hero = ({ onStart }: { onStart: () => void }) => (
-  <section className="pt-32 pb-20 overflow-hidden">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-brand-dark px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
-            <Zap size={14} className="text-primary-dark" />
-            Atendimento Automático 24h
-          </div>
-          <h1 className="text-5xl lg:text-6xl font-extrabold text-slate-900 leading-[1.1] mb-6">
-            Eu coloco um <span className="text-primary-dark">vendedor automático</span> no seu WhatsApp.
-          </h1>
-          <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
-            Responda clientes em segundos, qualifique leads e aumente suas vendas sem precisar estar online o tempo todo.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button 
-              onClick={onStart}
-              className="bg-primary hover:bg-primary-dark text-brand-dark px-8 py-4 rounded-xl text-lg font-bold transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-2 group"
-            >
-              Quero o atendemosWhats
-              <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button className="bg-white border border-slate-200 hover:border-primary text-slate-700 px-8 py-4 rounded-xl text-lg font-bold transition-all flex items-center justify-center gap-2">
-              Ver Demonstração
-            </button>
-          </div>
-          <div className="mt-10 flex items-center gap-4 text-sm text-slate-500">
-            <div className="flex -space-x-2">
-              {[1, 2, 3, 4].map((i) => (
-                <img 
-                  key={i}
-                  src={`https://picsum.photos/seed/user${i}/100/100`} 
-                  className="w-8 h-8 rounded-full border-2 border-white"
-                  alt="User"
-                  referrerPolicy="no-referrer"
-                />
-              ))}
-            </div>
-            <span>+500 empresas escalando vendas no WhatsApp</span>
-          </div>
-        </motion.div>
-        
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative"
-        >
-          <div className="relative z-10 bg-slate-100 rounded-3xl p-4 shadow-2xl border border-white/50">
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-              <div className="bg-brand-dark p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-brand-dark font-black">W</div>
-                <div>
-                  <div className="text-white font-bold text-sm">atendemosWhats</div>
-                  <div className="text-white/70 text-xs">Online agora</div>
-                </div>
-              </div>
-              <div className="p-4 space-y-4 h-[400px] bg-[#f0f2f5] overflow-y-auto">
-                <div className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm max-w-[80%] text-sm border border-slate-100">
-                  Olá! Vi que você tem interesse em nossos produtos. Como posso te ajudar hoje? 😊
-                </div>
-                <div className="bg-primary/20 p-3 rounded-lg rounded-tr-none shadow-sm max-w-[80%] ml-auto text-sm border border-primary/10">
-                  Gostaria de saber o preço do plano profissional.
-                </div>
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1 }}
-                  className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm max-w-[80%] text-sm border border-slate-100"
-                >
-                  O Plano Profissional é ideal para empresas que querem gerar leads! Ele inclui IA treinada, qualificação automática e integração com CRM. Posso te enviar os detalhes?
-                </motion.div>
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 2 }}
-                  className="bg-primary/20 p-3 rounded-lg rounded-tr-none shadow-sm max-w-[80%] ml-auto text-sm border border-primary/10"
-                >
-                  Sim, por favor!
-                </motion.div>
-              </div>
-              <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2">
-                <div className="flex-1 bg-white border border-slate-200 rounded-full px-4 py-2 text-xs text-slate-400">Digite uma mensagem...</div>
-                <div className="bg-primary p-2 rounded-full text-brand-dark"><ArrowRight size={16} /></div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -top-6 -right-6 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10"></div>
-          <div className="absolute -bottom-6 -left-6 w-48 h-48 bg-primary/10 rounded-full blur-3xl -z-10"></div>
-        </motion.div>
-      </div>
-    </div>
-  </section>
-);
-
-const ArgumentCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
-  <div className="p-8 rounded-2xl bg-slate-50 border border-slate-100 hover:border-primary/30 transition-all hover:shadow-xl hover:shadow-slate-200/50 group">
-    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mb-6 shadow-sm group-hover:bg-primary group-hover:text-brand-dark transition-colors">
-      <Icon size={24} />
-    </div>
-    <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
-    <p className="text-slate-600 leading-relaxed">{description}</p>
-  </div>
-);
-
-const Arguments = () => (
-  <section id="beneficios" className="py-24 bg-white">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="text-center max-w-3xl mx-auto mb-16">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
-          Por que seu negócio precisa do <span className="text-primary-dark">atendemosWhats</span>?
-        </h2>
-        <p className="text-lg text-slate-600">
-          Não deixe o dinheiro escapar por falta de atendimento imediato.
-        </p>
-      </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <ArgumentCard 
-          icon={Clock} 
-          title="Vendas 24h" 
-          description="Você perde vendas fora do horário comercial? Sua IA atende e vende enquanto você dorme."
-        />
-        <ArgumentCard 
-          icon={Zap} 
-          title="Resposta Instantânea" 
-          description="Demora pra responder faz o cliente ir pro concorrente. Responda em segundos, sempre."
-        />
-        <ArgumentCard 
-          icon={Users} 
-          title="Fim das Repetições" 
-          description="Pare de responder sempre as mesmas perguntas. Deixe a IA cuidar do FAQ inteligente."
-        />
-        <ArgumentCard 
-          icon={TrendingUp} 
-          title="Escala de Vendas" 
-          description="Seu WhatsApp vira um vendedor automático focado em conversão e geração de leads."
-        />
-      </div>
-    </div>
-  </section>
-);
-
-const PlanCard = ({ 
-  title, 
-  price, 
-  setup, 
-  features, 
-  recommended = false,
-  colorClass = "bg-primary",
-  onSelect
+const NumbersTab = ({ 
+  clientsData, 
+  selectedClientId, 
+  setSelectedClientId, 
+  configStatus, 
+  fetchClients 
 }: { 
-  title: string, 
-  price: string, 
-  setup: string, 
-  features: string[], 
-  recommended?: boolean,
-  colorClass?: string,
-  onSelect: () => void
-}) => (
-  <div className={`relative p-8 rounded-3xl border ${recommended ? 'border-primary shadow-2xl scale-105 z-10 bg-white' : 'border-slate-200 bg-slate-50/50'}`}>
-    {recommended && (
-      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-brand-dark px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
-        Mais Popular
-      </div>
-    )}
-    <h3 className="text-2xl font-bold text-slate-900 mb-2">{title}</h3>
-    <div className="mb-6">
-      <div className="flex items-baseline gap-1">
-        <span className="text-4xl font-extrabold text-slate-900">R$ {price}</span>
-        <span className="text-slate-500 font-medium">/mês</span>
-      </div>
-      <div className="text-sm text-slate-500 mt-1">Setup único: R$ {setup}</div>
-    </div>
-    <ul className="space-y-4 mb-8">
-      {features.map((feature, i) => (
-        <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-          <CheckCircle2 className="text-primary-dark shrink-0 mt-0.5" size={18} />
-          {feature}
-        </li>
-      ))}
-    </ul>
-    <button 
-      onClick={onSelect}
-      className={`w-full py-4 rounded-xl font-bold transition-all ${recommended ? 'bg-primary text-brand-dark hover:bg-primary-dark shadow-lg shadow-primary/20' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
-    >
-      Escolher Plano
-    </button>
-  </div>
-);
+  clientsData: any, 
+  selectedClientId: string | null, 
+  setSelectedClientId: (id: string | null) => void,
+  configStatus: any,
+  fetchClients: () => void
+}) => {
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [connectionType, setConnectionType] = useState<'qr' | 'meta'>('qr');
+  const [metaConfig, setMetaConfig] = useState({ token: '', phoneNumberId: '', verifyToken: '' });
 
-const Pricing = () => (
-  <section id="planos" className="py-24 bg-slate-50">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="text-center max-w-3xl mx-auto mb-16">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
-          Pacotes Simples para <span className="text-primary-dark">Resultados Reais</span>
-        </h2>
-        <p className="text-lg text-slate-600">
-          Escolha o nível de automação ideal para o momento da sua empresa.
-        </p>
-      </div>
-      <div className="grid lg:grid-cols-3 gap-8 items-start">
-        <PlanCard 
-          title="Plano Essencial"
-          price="197"
-          setup="500"
-          onSelect={() => handleCheckout("Plano Essencial", 197)}
-          features={[
-            "Chatbot com respostas automáticas",
-            "Menu inicial (atendimento básico)",
-            "FAQ inteligente",
-            "Integração com WhatsApp",
-            "Encaminhamento para humano"
-          ]}
-        />
-        <PlanCard 
-          title="Plano Profissional"
-          price="497"
-          setup="1.500"
-          recommended={true}
-          onSelect={() => handleCheckout("Plano Profissional", 497)}
-          features={[
-            "Tudo do Essencial +",
-            "IA treinada com conteúdo da empresa",
-            "Qualificação de leads automática",
-            "Fluxos de vendas (orçamento/agendamento)",
-            "Integração com CRM ou planilha"
-          ]}
-        />
-        <PlanCard 
-          title="Plano Premium"
-          price="997"
-          setup="3.000"
-          onSelect={() => handleCheckout("Plano Premium", 997)}
-          features={[
-            "Tudo do Profissional +",
-            "Funil completo de vendas no WhatsApp",
-            "Automações (follow-up, recuperação)",
-            "Integrações avançadas",
-            "Relatórios e otimizações mensais"
-          ]}
-        />
-      </div>
-      <div className="mt-16 text-center">
-        <p className="text-slate-500 text-sm">
-          💡 <strong>Dica:</strong> Não vendemos apenas tecnologia, vendemos um serviço contínuo de otimização e resultados.
-        </p>
-      </div>
-    </div>
-  </section>
-);
+  const selectedClient = clientsData.clients.find((c: any) => c.id === selectedClientId);
 
-const Step = ({ number, title, description, items }: { number: string, title: string, description: string, items: string[] }) => (
-  <div className="relative pl-12 pb-12 last:pb-0">
-    <div className="absolute left-0 top-0 w-8 h-8 bg-primary text-brand-dark rounded-full flex items-center justify-center font-bold text-sm z-10">
-      {number}
-    </div>
-    <div className="absolute left-4 top-8 bottom-0 w-px bg-slate-200 last:hidden"></div>
-    <h3 className="text-xl font-bold text-slate-900 mb-2">{title}</h3>
-    <p className="text-slate-600 mb-4">{description}</p>
-    <div className="flex flex-wrap gap-2">
-      {items.map((item, i) => (
-        <span key={i} className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-medium border border-slate-200">
-          {item}
-        </span>
-      ))}
-    </div>
-  </div>
-);
-
-const Process = () => (
-  <section id="processo" className="py-24 bg-white">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid lg:grid-cols-2 gap-16 items-center">
-        <div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6">
-            Nosso Processo de <span className="text-primary-dark">Entrega Padronizado</span>
-          </h2>
-          <p className="text-lg text-slate-600 mb-10">
-            Trabalhamos em etapas claras para garantir que sua IA fale a língua do seu negócio e converta visitantes em clientes.
-          </p>
-          <div className="space-y-2">
-            <Step 
-              number="1" 
-              title="Diagnóstico" 
-              description="Entendemos seu negócio e mapeamos as principais dúvidas dos clientes."
-              items={["Mapear dúvidas", "Definir objetivos"]}
-            />
-            <Step 
-              number="2" 
-              title="Estruturação" 
-              description="Criamos os fluxos de conversa e definimos o tom de voz da sua marca."
-              items={["Fluxos de conversa", "Tom de voz"]}
-            />
-            <Step 
-              number="3" 
-              title="Implementação" 
-              description="Configuramos o WhatsApp, subimos o chatbot e realizamos testes internos."
-              items={["Configurar API", "Testes internos"]}
-            />
-            <Step 
-              number="4" 
-              title="Treinamento da IA" 
-              description="Alimentamos a IA com seus produtos, serviços e argumentos de venda."
-              items={["Argumentos de venda", "Objeções"]}
-            />
-            <Step 
-              number="5" 
-              title="Otimização Contínua" 
-              description="Ajustamos respostas e melhoramos a conversão com base em dados reais."
-              items={["Melhorar conversão", "Novos fluxos"]}
-            />
-          </div>
-        </div>
-        <div className="bg-brand-dark rounded-3xl p-8 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-brand-dark">
-                <BrainCircuit size={28} />
-              </div>
-              <div>
-                <h4 className="font-bold text-xl">Diferencial Exclusivo</h4>
-                <p className="text-slate-400 text-sm">O que nos separa dos outros</p>
-              </div>
-            </div>
-            <ul className="space-y-6">
-              <li className="flex gap-4">
-                <div className="bg-white/10 p-2 rounded-lg h-fit"><CheckCircle2 className="text-primary" size={20} /></div>
-                <div>
-                  <h5 className="font-bold mb-1">IA Humanizada</h5>
-                  <p className="text-slate-400 text-sm">Não é um robô travado. Nossa IA responde de forma natural e fluida.</p>
-                </div>
-              </li>
-              <li className="flex gap-4">
-                <div className="bg-white/10 p-2 rounded-lg h-fit"><CheckCircle2 className="text-primary" size={20} /></div>
-                <div>
-                  <h5 className="font-bold mb-1">Foco Total em Vendas</h5>
-                  <p className="text-slate-400 text-sm">Não fazemos apenas suporte. Criamos funis de vendas dentro do WhatsApp.</p>
-                </div>
-              </li>
-              <li className="flex gap-4">
-                <div className="bg-white/10 p-2 rounded-lg h-fit"><CheckCircle2 className="text-primary" size={20} /></div>
-                <div>
-                  <h5 className="font-bold mb-1">Estratégia de Funil</h5>
-                  <p className="text-slate-400 text-sm">Mapeamos cada etapa da jornada do seu cliente para maximizar o lucro.</p>
-                </div>
-              </li>
-            </ul>
-            <div className="mt-12 p-6 bg-white/5 rounded-2xl border border-white/10">
-              <p className="italic text-slate-300 text-sm">
-                "O chatbot vira a porta de entrada do seu ecossistema. Depois dele, podemos escalar com tráfego pago, landing pages e CRM."
-              </p>
-            </div>
-          </div>
-          <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
-
-const FAQItem = ({ question, answer }: { question: string, answer: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="border-b border-slate-200 py-4">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center text-left font-bold text-slate-900 group"
-      >
-        <span className="group-hover:text-primary-dark transition-colors">{question}</span>
-        {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-      </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <p className="pt-4 text-slate-600 leading-relaxed">
-              {answer}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-const FAQ = () => (
-  <section className="py-24 bg-slate-50">
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 className="text-3xl font-extrabold text-slate-900 mb-12 text-center">Dúvidas Frequentes</h2>
-      <div className="space-y-2">
-        <FAQItem 
-          question="A IA realmente parece humana?" 
-          answer="Sim! Utilizamos modelos avançados de linguagem que permitem que a IA entenda o contexto, gírias e responda de forma natural, fugindo daquele padrão de 'digite 1 para vendas'."
-        />
-        <FAQItem 
-          question="Preciso ter um número de WhatsApp Business?" 
-          answer="Sim, recomendamos o uso da API oficial do WhatsApp para garantir estabilidade e evitar bloqueios, especialmente para grandes volumes de mensagens."
-        />
-        <FAQItem 
-          question="Como a IA aprende sobre a minha empresa?" 
-          answer="Na etapa de treinamento, alimentamos a IA com seus manuais, lista de produtos, preços, FAQ e até gravações de atendimentos reais para que ela aprenda seu tom de voz."
-        />
-        <FAQItem 
-          question="Posso intervir na conversa se necessário?" 
-          answer="Com certeza. Em todos os planos, existe a opção de encaminhamento para um humano. Você pode assumir o chat a qualquer momento."
-        />
-      </div>
-    </div>
-  </section>
-);
-
-const CTA = ({ onStart }: { onStart: () => void }) => (
-  <section className="py-20 bg-primary relative overflow-hidden">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-      <h2 className="text-4xl md:text-5xl font-extrabold text-brand-dark mb-8">
-        Pronto para transformar seu WhatsApp em uma máquina de vendas?
-      </h2>
-      <p className="text-brand-dark/80 text-xl mb-10 max-w-2xl mx-auto font-medium">
-        Pare de perder leads por demora no atendimento. Comece hoje sua automação inteligente.
-      </p>
-      <button 
-        onClick={onStart}
-        className="bg-brand-dark text-white hover:bg-brand-navy px-10 py-5 rounded-2xl text-xl font-bold transition-all shadow-2xl flex items-center justify-center gap-2 mx-auto group"
-      >
-        Falar com um Especialista
-        <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-      </button>
-    </div>
-    <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-      <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl"></div>
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-    </div>
-  </section>
-);
-
-const Footer = () => (
-  <footer className="bg-brand-dark py-12 border-t border-white/5">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-        <Logo className="brightness-0 invert" />
-        <div className="flex gap-8 text-slate-400 text-sm">
-          <a href="#" className="hover:text-white transition-colors">Termos de Uso</a>
-          <a href="#" className="hover:text-white transition-colors">Privacidade</a>
-          <a href="#" className="hover:text-white transition-colors">Contato</a>
-        </div>
-        <div className="text-slate-500 text-sm">
-          © 2026 atendemosWhats. Todos os direitos reservados.
-        </div>
-      </div>
-    </div>
-  </footer>
-);
-
-const Dashboard = ({ onBack }: { onBack: () => void }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'numbers' | 'flows' | 'team' | 'clients'>('overview');
-
-  const [showSuccess, setShowSuccess] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success') === 'true') {
-      setShowSuccess(true);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
+  const handleConnect = async () => {
+    if (!selectedClientId) return;
+    setConnectionStatus('connecting');
+    try {
+      await fetch(`/api/whatsapp/connect/${selectedClientId}`);
+      fetchClients();
+    } catch (error) {
+      console.error('Error connecting:', error);
+      setConnectionStatus('disconnected');
     }
-  }, []);
+  };
 
-  const SidebarItem = ({ id, icon: Icon, label }: { id: any, icon: any, label: string }) => (
-    <button 
-      onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === id ? 'bg-primary text-primary-dark shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-    >
-      <Icon size={20} />
-      <span className="font-semibold text-sm">{label}</span>
-    </button>
-  );
+  const handleDisconnect = async () => {
+    if (!selectedClientId) return;
+    try {
+      await fetch(`/api/whatsapp/disconnect/${selectedClientId}`);
+      fetchClients();
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+    }
+  };
 
-  return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      <WhatsAppAutomation />
-      {/* Sidebar */}
-      <aside className="w-64 bg-brand-dark border-r border-brand-navy flex flex-col p-6">
-        <div className="flex items-center gap-2 mb-10">
-          <div className="bg-primary p-1.5 rounded-lg">
-            <MessageSquare className="text-brand-dark w-5 h-5" />
-          </div>
-          <span className="font-bold text-lg tracking-tight text-white">atendemos<span className="text-primary">Whats</span></span>
-        </div>
-        
-        <nav className="flex-1 space-y-2">
-          <SidebarItem id="overview" icon={BarChart3} label="Visão Geral" />
-          <SidebarItem id="numbers" icon={Smartphone} label="Números WhatsApp" />
-          <SidebarItem id="flows" icon={BrainCircuit} label="Fluxos de IA" />
-          <SidebarItem id="team" icon={Users} label="Atendentes" />
-          <SidebarItem id="clients" icon={Target} label="Clientes" />
-        </nav>
+  const handleSaveMetaConfig = async () => {
+    if (!selectedClientId) return;
+    try {
+      await fetch(`/api/whatsapp/config/${selectedClientId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(metaConfig)
+      });
+      fetchClients();
+    } catch (error) {
+      console.error('Error saving meta config:', error);
+    }
+  };
 
-        <div className="mt-auto pt-6 border-t border-slate-100">
-          <button 
-            onClick={onBack}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all font-semibold text-sm"
-          >
-            <Rocket size={20} />
-            Sair do Painel
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-8">
-        {showSuccess && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3 text-green-700"
-          >
-            <CheckCircle2 size={20} />
-            <span className="font-bold">Pagamento realizado com sucesso! Seu plano foi ativado.</span>
-            <button onClick={() => setShowSuccess(false)} className="ml-auto text-green-500 hover:text-green-700">
-              <Rocket size={18} />
-            </button>
-          </motion.div>
-        )}
-        <header className="flex justify-between items-center mb-10">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {activeTab === 'overview' && 'Bem-vindo de volta, Admin'}
-              {activeTab === 'numbers' && 'Gerenciar Números'}
-              {activeTab === 'flows' && 'Construtor de Fluxos'}
-              {activeTab === 'team' && 'Equipe de Atendimento'}
-              {activeTab === 'clients' && 'Gestão de Clientes'}
-            </h1>
-            <p className="text-slate-500 text-sm">
-              {activeTab === 'overview' && 'Aqui está o que está acontecendo hoje.'}
-              {activeTab === 'numbers' && 'Conecte e monitore suas instâncias de WhatsApp.'}
-              {activeTab === 'flows' && 'Configure a inteligência e os caminhos de venda.'}
-              {activeTab === 'team' && 'Gerencie acessos e permissões dos atendentes.'}
-              {activeTab === 'clients' && 'Configure o atendimento para cada empresa.'}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="bg-white p-2 rounded-full border border-slate-200 text-slate-400">
-              <Settings size={20} />
-            </div>
-            <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-full pl-2 pr-4 py-1.5">
-              <div className="w-8 h-8 bg-slate-200 rounded-full overflow-hidden">
-                <img src="https://picsum.photos/seed/admin/100/100" alt="Avatar" referrerPolicy="no-referrer" />
-              </div>
-              <span className="text-sm font-bold text-slate-700">Flávio Ribeiro</span>
-            </div>
-          </div>
-        </header>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {activeTab === 'overview' && <OverviewTab />}
-            {activeTab === 'numbers' && <NumbersTab />}
-            {activeTab === 'flows' && <FlowsTab />}
-            {activeTab === 'team' && <TeamTab />}
-            {activeTab === 'clients' && <ClientsTab />}
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
-  );
-};
-
-const OverviewTab = () => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Users size={24} /></div>
-        <span className="text-green-500 text-xs font-bold bg-green-50 px-2 py-1 rounded-lg">+12%</span>
-      </div>
-      <div className="text-3xl font-bold text-slate-900">1,284</div>
-      <div className="text-slate-500 text-sm font-medium">Leads Gerados</div>
-    </div>
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-primary/10 text-primary-dark rounded-xl"><MessageSquare size={24} /></div>
-        <span className="text-green-500 text-xs font-bold bg-green-50 px-2 py-1 rounded-lg">+5%</span>
-      </div>
-      <div className="text-3xl font-bold text-slate-900">8,432</div>
-      <div className="text-slate-500 text-sm font-medium">Mensagens Enviadas</div>
-    </div>
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Star size={24} /></div>
-        <span className="text-slate-400 text-xs font-bold bg-slate-50 px-2 py-1 rounded-lg">0%</span>
-      </div>
-      <div className="text-3xl font-bold text-slate-900">98.2%</div>
-      <div className="text-slate-500 text-sm font-medium">Taxa de Satisfação</div>
-    </div>
-    <div className="md:col-span-3 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-      <h3 className="font-bold text-lg mb-6">Atividade Recente</h3>
-      <div className="space-y-6">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400"><Smartphone size={20} /></div>
-              <div>
-                <div className="font-bold text-slate-900">Novo Lead: João Silva</div>
-                <div className="text-xs text-slate-500">Interessado no Plano Profissional • Há 5 min</div>
-              </div>
-            </div>
-            <button className="text-primary-dark text-sm font-bold hover:underline">Ver Conversa</button>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const NumbersTab = () => {
-  const [isConfiguring, setIsConfiguring] = useState(false);
-  
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2 text-sm text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          Automação IA Ativa
+      <div className="flex flex-col md:flex-row gap-6 items-start">
+        <div className="flex-1 bg-[#0F0F0F] p-8 rounded-[40px] border border-white/5 shadow-2xl">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-inner shadow-primary/20">
+              <Smartphone size={28} />
+            </div>
+            <div>
+              <h3 className="font-black text-2xl text-white tracking-tight">Conectar WhatsApp</h3>
+              <p className="text-slate-400 text-sm">Escolha um cliente e conecte o número para automação.</p>
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Selecione o Cliente</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {clientsData.clients.map((client: any) => (
+                  <button
+                    key={client.id}
+                    onClick={() => setSelectedClientId(client.id)}
+                    className={`p-5 rounded-3xl border-2 text-left transition-all duration-300 group ${
+                      selectedClientId === client.id 
+                        ? 'border-primary bg-primary/5 ring-4 ring-primary/10' 
+                        : 'border-white/5 bg-white/5 hover:border-white/10'
+                    }`}
+                  >
+                    <div className={`font-bold text-lg ${selectedClientId === client.id ? 'text-primary' : 'text-slate-200'}`}>{client.name}</div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${client.status === 'open' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-slate-600'}`}></div>
+                      <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
+                        {client.status === 'open' ? 'Conectado' : 'Desconectado'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {selectedClientId && (
+              <div className="pt-8 border-t border-white/5">
+                <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl mb-8">
+                  <button 
+                    onClick={() => setConnectionType('qr')}
+                    className={`flex-1 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${connectionType === 'qr' ? 'bg-primary text-primary-dark shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    QR Code
+                  </button>
+                  <button 
+                    onClick={() => setConnectionType('meta')}
+                    className={`flex-1 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${connectionType === 'meta' ? 'bg-primary text-primary-dark shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Meta API
+                  </button>
+                </div>
+
+                {connectionType === 'qr' ? (
+                  <div className="flex flex-col items-center text-center">
+                    {selectedClient?.status === 'open' ? (
+                      <div className="py-12">
+                        <div className="w-24 h-24 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-green-500/20">
+                          <CheckCircle2 size={48} />
+                        </div>
+                        <h4 className="text-2xl font-black text-white mb-2">WhatsApp Conectado!</h4>
+                        <p className="text-slate-400 mb-10 max-w-xs mx-auto">O número está pronto para responder automaticamente com IA.</p>
+                        <button 
+                          onClick={handleDisconnect}
+                          className="bg-red-500/10 text-red-500 px-10 py-4 rounded-2xl font-black hover:bg-red-500/20 transition-all border border-red-500/20"
+                        >
+                          Desconectar Número
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-full">
+                        {selectedClient?.qr ? (
+                          <div className="space-y-8">
+                            <div className="bg-white p-6 rounded-[40px] border-4 border-primary inline-block shadow-[0_0_50px_rgba(255,204,0,0.3)]">
+                              <img src={selectedClient.qr} alt="WhatsApp QR Code" className="w-64 h-64" />
+                            </div>
+                            <div className="max-w-xs mx-auto">
+                              <p className="text-sm text-slate-400 font-medium leading-relaxed">Abra o WhatsApp no seu celular, vá em <span className="text-white font-bold">Aparelhos Conectados</span> e escaneie o código.</p>
+                            </div>
+                            <button 
+                              onClick={handleConnect}
+                              className="text-slate-500 text-xs font-black uppercase tracking-widest hover:text-primary flex items-center gap-2 mx-auto transition-colors"
+                            >
+                              <RefreshCw size={14} /> Gerar novo código
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="py-12">
+                            <div className="w-24 h-24 bg-white/5 text-slate-600 rounded-full flex items-center justify-center mx-auto mb-8">
+                              <QrCode size={48} />
+                            </div>
+                            <button 
+                              onClick={handleConnect}
+                              className="bg-primary text-primary-dark px-12 py-5 rounded-3xl font-black shadow-[0_10px_40px_rgba(255,204,0,0.3)] hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-sm"
+                            >
+                              Gerar QR Code de Conexão
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Access Token</label>
+                      <input 
+                        type="password"
+                        value={metaConfig.token}
+                        onChange={(e) => setMetaConfig({...metaConfig, token: e.target.value})}
+                        className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all"
+                        placeholder="EAAB..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Phone Number ID</label>
+                        <input 
+                          type="text"
+                          value={metaConfig.phoneNumberId}
+                          onChange={(e) => setMetaConfig({...metaConfig, phoneNumberId: e.target.value})}
+                          className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all"
+                          placeholder="1092..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Verify Token</label>
+                        <input 
+                          type="text"
+                          value={metaConfig.verifyToken}
+                          onChange={(e) => setMetaConfig({...metaConfig, verifyToken: e.target.value})}
+                          className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all"
+                          placeholder="meu_token_secreto"
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handleSaveMetaConfig}
+                      className="w-full bg-white text-black py-5 rounded-3xl font-black uppercase tracking-widest hover:bg-slate-200 transition-all mt-6 shadow-xl"
+                    >
+                      Salvar Configuração Meta
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full md:w-80 space-y-6">
+          <div className="bg-[#0F0F0F] p-6 rounded-[32px] border border-white/5 shadow-xl">
+            <h4 className="font-black text-white mb-6 flex items-center gap-2 uppercase tracking-widest text-xs">
+              <History size={18} className="text-primary" />
+              Status do Sistema
+            </h4>
+            <div className="space-y-5">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-bold">Sessões Ativas</span>
+                <span className="font-black text-white">{clientsData.clients.filter((c: any) => c.status === 'open').length}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-bold">Latência Média</span>
+                <span className="font-black text-green-500">142ms</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-bold">Mensagens/Min</span>
+                <span className="font-black text-white">12</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-primary/5 p-6 rounded-[32px] border border-primary/10">
+            <h4 className="font-black text-primary mb-3 uppercase tracking-widest text-xs">Dica de Conexão</h4>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Para maior estabilidade, utilize a Meta API oficial. A conexão via QR Code pode expirar se o celular ficar offline por muito tempo.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ClientsTab = ({ 
+  clientsData, 
+  selectedClientId, 
+  setSelectedClientId, 
+  onAdd, 
+  onEdit, 
+  onDelete 
+}: { 
+  clientsData: any, 
+  selectedClientId: string | null, 
+  setSelectedClientId: (id: string | null) => void,
+  onAdd: () => void,
+  onEdit: (client: any) => void,
+  onDelete: (id: string) => void
+}) => (
+  <div className="space-y-6">
+    <div className="bg-[#0F0F0F] p-8 rounded-[40px] border border-white/5 shadow-2xl">
+      <div className="flex justify-between items-center mb-10">
+        <div>
+          <h3 className="font-black text-3xl text-white mb-2 tracking-tight">Seus Clientes</h3>
+          <p className="text-slate-400">Gerencie as contas e regras de atendimento de cada empresa.</p>
         </div>
         <button 
-          onClick={() => setIsConfiguring(!isConfiguring)}
-          className="bg-primary hover:bg-primary-dark text-primary-dark px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2"
+          onClick={onAdd}
+          className="bg-primary text-primary-dark px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:scale-105 transition-all shadow-xl shadow-primary/20 uppercase tracking-widest text-xs"
         >
-          <Zap size={18} />
-          {isConfiguring ? 'Fechar Configuração' : 'Configurar API WhatsApp'}
+          <Plus size={20} />
+          Novo Cliente
         </button>
       </div>
 
-      {isConfiguring && (
-        <motion.div 
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="bg-white p-8 rounded-2xl border-2 border-primary/20 shadow-xl"
-        >
-          <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <Settings className="text-primary-dark" />
-            Configuração da API Cloud (Meta)
-          </h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">WhatsApp Token (Permanent)</label>
-              <input 
-                type="password" 
-                placeholder="EAAG..." 
-                className="w-full p-3 rounded-xl border border-slate-200 focus:border-primary outline-none transition-all"
-              />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {clientsData.clients.length > 0 ? (
+          clientsData.clients.map((client: any) => (
+            <div
+              key={client.id}
+              className={`p-8 rounded-[40px] border-2 transition-all relative group ${selectedClientId === client.id ? 'border-primary bg-primary/5 ring-8 ring-primary/5' : 'border-white/5 hover:border-white/10 bg-white/5'}`}
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-slate-500 group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                  <Users size={28} />
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => onEdit(client)}
+                    className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/20 rounded-xl transition-all"
+                  >
+                    <Settings size={20} />
+                  </button>
+                  <button 
+                    onClick={() => onDelete(client.id)}
+                    className="p-2.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <h4 className="font-black text-2xl text-white mb-2">{client.name}</h4>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${client.status === 'open' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-slate-600'}`}></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    {client.status === 'open' ? 'WhatsApp Ativo' : 'Desconectado'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="bg-black/40 p-5 rounded-3xl mb-8 border border-white/5">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Regra de Atendimento</div>
+                <p className="text-xs text-slate-400 line-clamp-3 italic leading-relaxed">
+                  {client.prompt || 'Nenhuma regra configurada.'}
+                </p>
+              </div>
+              
+              <button 
+                onClick={() => setSelectedClientId(client.id)}
+                className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${selectedClientId === client.id ? 'bg-primary text-primary-dark shadow-lg shadow-primary/20' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+              >
+                {selectedClientId === client.id ? 'Selecionado' : 'Gerenciar Conexão'}
+              </button>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Phone Number ID</label>
-              <input 
-                type="text" 
-                placeholder="123456789..." 
-                className="w-full p-3 rounded-xl border border-slate-200 focus:border-primary outline-none transition-all"
-              />
+          ))
+        ) : (
+          <div className="col-span-full py-24 text-center">
+            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8 text-slate-700">
+              <Users size={48} />
             </div>
+            <h3 className="text-2xl font-black text-white mb-3">Nenhum cliente ainda</h3>
+            <p className="text-slate-500 mb-10 max-w-xs mx-auto">Comece adicionando seu primeiro cliente para automatizar o atendimento.</p>
+            <button 
+              onClick={onAdd}
+              className="bg-primary text-primary-dark px-10 py-5 rounded-3xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-2xl shadow-primary/20"
+            >
+              Adicionar Primeiro Cliente
+            </button>
           </div>
-          <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100 text-sm text-blue-700 flex gap-3">
-            <AlertCircle size={20} className="shrink-0" />
-            <div>
-              <p className="font-bold mb-1">Como testar agora:</p>
-              <ol className="list-decimal ml-4 space-y-1">
-                <li>Configure seu Webhook na Meta para: <code className="bg-white px-1 rounded">/api/webhook/whatsapp</code></li>
-                <li>Use o Verify Token definido no seu <code className="bg-white px-1 rounded">.env</code></li>
-                <li>Envie um "Oi" para o número configurado e veja a IA responder em segundos!</li>
-              </ol>
-            </div>
-          </div>
-          <button className="mt-6 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all">
-            Salvar Configurações
-          </button>
-        </motion.div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary/10 text-primary-dark rounded-2xl flex items-center justify-center font-bold">W1</div>
-            <div>
-              <div className="font-bold text-slate-900">Vendas Principal</div>
-              <div className="text-xs text-slate-500">+55 11 99999-9999</div>
-            </div>
-          </div>
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Conectado</span>
-        </div>
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-slate-50 p-3 rounded-xl">
-            <div className="text-xs text-slate-500 mb-1">Mensagens Hoje</div>
-            <div className="font-bold">245</div>
-          </div>
-          <div className="bg-slate-50 p-3 rounded-xl">
-            <div className="text-xs text-slate-500 mb-1">Uptime</div>
-            <div className="font-bold">99.9%</div>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-sm font-bold transition-all">Configurações</button>
-          <button className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-lg text-sm font-bold transition-all">Desconectar</button>
-        </div>
-      </div>
-      <div className="bg-white p-8 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-          <Smartphone size={32} />
-        </div>
-        <h3 className="font-bold text-slate-900 mb-2">Adicionar Instância</h3>
-        <p className="text-slate-500 text-sm max-w-xs mb-6">Conecte um novo número via QR Code para expandir sua operação.</p>
-        <button className="text-primary-dark font-bold hover:underline">Ver tutorial de conexão</button>
+        )}
       </div>
     </div>
   </div>
 );
-};
 
-const FlowsTab = () => (
-  <div className="space-y-6">
+const FlowsTab = ({ 
+  flows, 
+  clients, 
+  onAdd, 
+  onEdit, 
+  onDelete 
+}: { 
+  flows: any[], 
+  clients: any[], 
+  onAdd: () => void, 
+  onEdit: (flow: any) => void, 
+  onDelete: (id: string) => void 
+}) => (
+  <div className="space-y-8">
     <div className="flex justify-between items-center">
-      <div className="flex gap-2">
-        <button className="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-bold text-slate-700">Todos</button>
-        <button className="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-bold text-slate-500">Ativos</button>
-        <button className="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-bold text-slate-500">Rascunhos</button>
+      <div className="flex gap-3 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+        <button className="bg-primary text-primary-dark px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all">Todos</button>
+        <button className="text-slate-500 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-slate-300 transition-all">Ativos</button>
+        <button className="text-slate-500 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-slate-300 transition-all">Rascunhos</button>
       </div>
-      <button className="bg-primary hover:bg-primary-dark text-primary-dark px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
+      <button 
+        onClick={onAdd}
+        className="bg-white text-black px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3 shadow-2xl hover:bg-slate-200 uppercase tracking-widest text-[10px]"
+      >
         <BrainCircuit size={18} />
         Criar Novo Fluxo
       </button>
     </div>
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-[#0F0F0F] rounded-[40px] border border-white/5 shadow-2xl overflow-hidden">
       <table className="w-full text-left">
-        <thead className="bg-slate-50 border-b border-slate-200">
+        <thead className="bg-white/5 border-b border-white/5">
           <tr>
-            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome do Fluxo</th>
-            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cliente</th>
-            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Gatilhos</th>
-            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Ações</th>
+            <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Nome do Fluxo</th>
+            <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cliente</th>
+            <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Gatilhos</th>
+            <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
+            <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Ações</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
-          {[
-            { name: 'Boas-vindas & Qualificação', client: 'Imobiliária Silva', triggers: 'Palavra-chave: Oi, Olá', status: 'Ativo' },
-            { name: 'Agendamento de Consulta', client: 'Dr. Marcos (Dentista)', triggers: 'Menu: Agendar', status: 'Ativo' },
-            { name: 'Suporte Técnico Nível 1', client: 'TechSolutions', triggers: 'Palavra-chave: Ajuda', status: 'Rascunho' },
-          ].map((flow, i) => (
-            <tr key={i} className="hover:bg-slate-50 transition-colors">
-              <td className="px-6 py-4">
-                <div className="font-bold text-slate-900">{flow.name}</div>
-                <div className="text-xs text-slate-500">Atualizado há 2 dias</div>
+        <tbody className="divide-y divide-white/5">
+          {flows.map((flow) => (
+            <tr key={flow.id} className="hover:bg-white/[0.02] transition-colors group">
+              <td className="px-8 py-6">
+                <div className="font-bold text-white text-lg">{flow.name}</div>
+                <div className="text-[10px] text-slate-600 font-black uppercase tracking-widest mt-1">ID: {flow.id}</div>
               </td>
-              <td className="px-6 py-4 text-sm text-slate-600 font-medium">{flow.client}</td>
-              <td className="px-6 py-4 text-sm text-slate-500">{flow.triggers}</td>
-              <td className="px-6 py-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${flow.status === 'Ativo' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+              <td className="px-8 py-6 text-sm text-slate-400 font-medium">
+                {clients.find(c => c.id === flow.clientId)?.name || 'Cliente não encontrado'}
+              </td>
+              <td className="px-8 py-6 text-sm text-slate-500 font-mono">{flow.triggers}</td>
+              <td className="px-8 py-6">
+                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${flow.status === 'Ativo' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-white/5 text-slate-500 border border-white/10'}`}>
                   {flow.status}
                 </span>
               </td>
-              <td className="px-6 py-4">
-                <button className="text-primary-dark font-bold text-sm hover:underline">Editar</button>
+              <td className="px-8 py-6">
+                <div className="flex gap-4">
+                  <button onClick={() => onEdit(flow)} className="text-primary font-black text-[10px] uppercase tracking-widest hover:underline">Editar</button>
+                  <button onClick={() => onDelete(flow.id)} className="text-red-500 font-black text-[10px] uppercase tracking-widest hover:underline">Excluir</button>
+                </div>
               </td>
             </tr>
           ))}
+          {flows.length === 0 && (
+            <tr>
+              <td colSpan={5} className="px-8 py-20 text-center text-slate-600 italic font-medium">Nenhum fluxo criado ainda.</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
   </div>
 );
 
-const TeamTab = () => (
-  <div className="space-y-6">
+const PlaygroundTab = () => {
+  const [testMessage, setTestMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'ai', text: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSendMessage = async () => {
+    if (!testMessage.trim()) return;
+    
+    const userMsg = testMessage;
+    setTestMessage('');
+    setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
+    setIsLoading(true);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ role: 'user', parts: [{ text: userMsg }] }]
+      });
+      setChatHistory(prev => [...prev, { role: 'ai', text: response.text || 'Sem resposta.' }]);
+    } catch (error) {
+      console.error('Error in playground:', error);
+      setChatHistory(prev => [...prev, { role: 'ai', text: 'Erro ao processar mensagem.' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="h-[calc(100vh-240px)] flex flex-col bg-[#0F0F0F] rounded-[40px] border border-white/5 shadow-2xl overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-hide">
+        {chatHistory.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-30">
+            <Bot size={64} className="text-primary" />
+            <div>
+              <h4 className="text-xl font-black text-white uppercase tracking-widest">IA Playground</h4>
+              <p className="text-sm text-slate-500">Teste as regras de atendimento em tempo real.</p>
+            </div>
+          </div>
+        )}
+        {chatHistory.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[70%] p-6 rounded-3xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-primary text-primary-dark font-black shadow-xl shadow-primary/10' : 'bg-white/5 text-slate-300 border border-white/5'}`}>
+              {msg.text}
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-white/5 p-6 rounded-3xl border border-white/5 flex gap-2 items-center">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></div>
+              <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]"></div>
+              <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]"></div>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-10 border-t border-white/5 bg-black/20">
+        <div className="flex gap-4 max-w-4xl mx-auto">
+          <input 
+            type="text" 
+            value={testMessage}
+            onChange={(e) => setTestMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Digite uma mensagem para testar a IA..."
+            className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-8 py-5 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all outline-none"
+          />
+          <button 
+            onClick={handleSendMessage}
+            className="bg-primary text-primary-dark p-5 rounded-2xl shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Send size={28} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TeamTab = ({ 
+  team, 
+  onAdd, 
+  onEdit, 
+  onDelete 
+}: { 
+  team: any[], 
+  onAdd: () => void, 
+  onEdit: (member: any) => void, 
+  onDelete: (id: string) => void 
+}) => (
+  <div className="space-y-8">
     <div className="flex justify-end">
-      <button className="bg-primary hover:bg-primary-dark text-primary-dark px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
+      <button 
+        onClick={onAdd}
+        className="bg-primary text-primary-dark px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3 shadow-2xl shadow-primary/20 hover:scale-105 uppercase tracking-widest text-[10px]"
+      >
         <Users size={18} />
         Convidar Atendente
       </button>
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {[
-        { name: 'Flávio Ribeiro', role: 'Admin', email: 'flavio@vendedor.com', status: 'Online' },
-        { name: 'Ana Souza', role: 'Atendente', email: 'ana@vendedor.com', status: 'Online' },
-        { name: 'Carlos Lima', role: 'Atendente', email: 'carlos@vendedor.com', status: 'Offline' },
-      ].map((member, i) => (
-        <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-slate-100 rounded-full overflow-hidden">
-              <img src={`https://picsum.photos/seed/${member.name}/100/100`} alt={member.name} referrerPolicy="no-referrer" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {team.map((member) => (
+        <div key={member.id} className="bg-[#0F0F0F] p-8 rounded-[40px] border border-white/5 shadow-2xl group hover:border-primary transition-all duration-500">
+          <div className="flex items-center gap-5 mb-8">
+            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-slate-500 font-black text-xl group-hover:bg-primary group-hover:text-primary-dark transition-all duration-500 shadow-inner">
+              {member.name[0]}
             </div>
-            <div>
-              <div className="font-bold text-slate-900">{member.name}</div>
-              <div className="text-xs text-slate-500">{member.email}</div>
+            <div className="flex-1">
+              <h4 className="font-black text-xl text-white tracking-tight">{member.name}</h4>
+              <div className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">{member.role}</div>
+            </div>
+            <div className="flex gap-1">
+              <button onClick={() => onEdit(member)} className="p-2 text-slate-600 hover:text-primary transition-colors"><Settings size={18} /></button>
+              <button onClick={() => onDelete(member.id)} className="p-2 text-slate-600 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
             </div>
           </div>
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cargo</span>
-            <span className="text-sm font-bold text-slate-700">{member.role}</span>
+          <div className="text-sm text-slate-400 mb-8 font-medium bg-black/40 p-4 rounded-2xl border border-white/5">{member.email}</div>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${member.status === 'Online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-slate-700'}`}></div>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${member.status === 'Online' ? 'text-green-500' : 'text-slate-500'}`}>{member.status}</span>
+            </div>
           </div>
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status</span>
-            <span className={`flex items-center gap-1.5 text-xs font-bold ${member.status === 'Online' ? 'text-green-500' : 'text-slate-400'}`}>
-              <div className={`w-2 h-2 rounded-full ${member.status === 'Online' ? 'bg-green-500' : 'bg-slate-300'}`}></div>
-              {member.status}
-            </span>
-          </div>
-          <button className="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 py-2 rounded-lg text-sm font-bold transition-all">Gerenciar Acessos</button>
         </div>
       ))}
+      {team.length === 0 && (
+        <div className="col-span-full py-24 text-center text-slate-600 italic font-medium">Nenhum membro na equipe ainda.</div>
+      )}
     </div>
   </div>
 );
 
-const ClientsTab = () => (
-  <div className="space-y-6">
-    <div className="flex justify-end">
-      <button className="bg-primary hover:bg-primary-dark text-primary-dark px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
-        <Target size={18} />
-        Novo Cliente
-      </button>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {[
-        { name: 'Imobiliária Silva', plan: 'Profissional', numbers: 2, activeFlows: 4 },
-        { name: 'Dr. Marcos (Dentista)', plan: 'Essencial', numbers: 1, activeFlows: 2 },
-      ].map((client, i) => (
-        <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary-dark font-bold text-xl">
-                {client.name[0]}
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900">{client.name}</h3>
-                <span className="text-xs font-bold text-primary-dark bg-primary/10 px-2 py-0.5 rounded-md uppercase tracking-wider">Plano {client.plan}</span>
-              </div>
-            </div>
-            <button className="text-slate-400 hover:text-slate-600"><Settings size={20} /></button>
-          </div>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-slate-50 p-4 rounded-xl">
-              <div className="text-xs text-slate-500 mb-1">Números</div>
-              <div className="text-xl font-bold">{client.numbers}</div>
-            </div>
-            <div className="bg-slate-50 p-4 rounded-xl">
-              <div className="text-xs text-slate-500 mb-1">Fluxos Ativos</div>
-              <div className="text-xl font-bold">{client.activeFlows}</div>
+const SettingsTab = () => (
+  <div className="max-w-3xl space-y-10">
+    <section>
+      <h3 className="font-black text-2xl text-white mb-8 tracking-tight uppercase tracking-[0.1em]">Configurações Gerais</h3>
+      <div className="space-y-6">
+        <div className="bg-[#0F0F0F] p-8 rounded-[32px] border border-white/5 shadow-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+          <div className="flex items-center gap-6">
+            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors"><Globe size={28} /></div>
+            <div>
+              <div className="font-black text-lg text-white">Domínio Customizado</div>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">app.suaagencia.com</div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button className="flex-1 bg-primary text-primary-dark py-2.5 rounded-xl text-sm font-bold hover:bg-primary-dark transition-all">Configurar Fluxos</button>
-            <button className="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">Relatórios</button>
+          <button className="bg-white/5 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-dark transition-all">Configurar</button>
+        </div>
+        <div className="bg-[#0F0F0F] p-8 rounded-[32px] border border-white/5 shadow-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+          <div className="flex items-center gap-6">
+            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors"><Webhook size={28} /></div>
+            <div>
+              <div className="font-black text-lg text-white">Webhooks Globais</div>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Enviar eventos para URLs externas</div>
+            </div>
+          </div>
+          <button className="bg-white/5 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-dark transition-all">Gerenciar</button>
+        </div>
+        <div className="bg-[#0F0F0F] p-8 rounded-[32px] border border-white/5 shadow-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+          <div className="flex items-center gap-6">
+            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors"><Database size={28} /></div>
+            <div>
+              <div className="font-black text-lg text-white">Backup de Dados</div>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Exportar histórico de conversas</div>
+            </div>
+          </div>
+          <button className="bg-white/5 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-dark transition-all">Exportar</button>
+        </div>
+      </div>
+    </section>
+  </div>
+);
+
+const FlowModal = ({ flow, clients, onClose, onSave, setFlow }: any) => (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="bg-[#0F0F0F] w-full max-w-md rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden"
+    >
+      <div className="p-10 border-b border-white/5 flex justify-between items-center">
+        <h3 className="font-black text-2xl text-white tracking-tight">{flow.id ? 'Editar Fluxo' : 'Novo Fluxo'}</h3>
+        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-all text-slate-500 hover:text-white"><X size={24} /></button>
+      </div>
+      <div className="p-10 space-y-8">
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Nome do Fluxo</label>
+          <input 
+            type="text"
+            value={flow.name}
+            onChange={(e) => setFlow({ ...flow, name: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+            placeholder="Ex: Qualificação de Leads"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Cliente</label>
+          <select 
+            value={flow.clientId}
+            onChange={(e) => setFlow({ ...flow, clientId: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
+          >
+            <option value="" className="bg-[#0F0F0F]">Selecione um cliente</option>
+            {clients.map((c: any) => <option key={c.id} value={c.id} className="bg-[#0F0F0F]">{c.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Gatilhos (Separados por vírgula)</label>
+          <input 
+            type="text"
+            value={flow.triggers}
+            onChange={(e) => setFlow({ ...flow, triggers: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+            placeholder="Ex: Oi, Olá, Quero saber mais"
+          />
+        </div>
+        <button 
+          onClick={onSave}
+          className="w-full bg-primary text-primary-dark py-5 rounded-3xl font-black shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
+        >
+          {flow.id ? 'Salvar Alterações' : 'Criar Fluxo'}
+        </button>
+      </div>
+    </motion.div>
+  </div>
+);
+
+const TeamModal = ({ member, onClose, onSave, setMember }: any) => (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="bg-[#0F0F0F] w-full max-w-md rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden"
+    >
+      <div className="p-10 border-b border-white/5 flex justify-between items-center">
+        <h3 className="font-black text-2xl text-white tracking-tight">{member.id ? 'Editar Membro' : 'Convidar Membro'}</h3>
+        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-all text-slate-500 hover:text-white"><X size={24} /></button>
+      </div>
+      <div className="p-10 space-y-8">
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Nome Completo</label>
+          <input 
+            type="text"
+            value={member.name}
+            onChange={(e) => setMember({ ...member, name: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+            placeholder="Ex: João Silva"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">E-mail</label>
+          <input 
+            type="email"
+            value={member.email}
+            onChange={(e) => setMember({ ...member, email: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+            placeholder="joao@empresa.com"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Cargo/Role</label>
+          <select 
+            value={member.role}
+            onChange={(e) => setMember({ ...member, role: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
+          >
+            <option value="Atendente" className="bg-[#0F0F0F]">Atendente</option>
+            <option value="Supervisor" className="bg-[#0F0F0F]">Supervisor</option>
+            <option value="Admin" className="bg-[#0F0F0F]">Admin</option>
+          </select>
+        </div>
+        <button 
+          onClick={onSave}
+          className="w-full bg-primary text-primary-dark py-5 rounded-3xl font-black shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
+        >
+          {member.id ? 'Salvar Alterações' : 'Convidar Agora'}
+        </button>
+      </div>
+    </motion.div>
+  </div>
+);
+
+const PromptModal = ({ client, onClose, onSave, setClient }: any) => (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="bg-[#0F0F0F] w-full max-w-2xl rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden max-h-[90vh] overflow-y-auto"
+    >
+      <div className="p-10 border-b border-white/5 flex justify-between items-center sticky top-0 bg-[#0F0F0F] z-10">
+        <div>
+          <h3 className="font-black text-3xl text-white tracking-tight">Editar Cliente</h3>
+          <p className="text-slate-500 text-sm mt-1">Configure as regras e integrações para {client?.name}.</p>
+        </div>
+        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-all text-slate-500 hover:text-white"><X size={24} /></button>
+      </div>
+      <div className="p-10 space-y-10">
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Nome da Empresa</label>
+          <input 
+            type="text"
+            value={client?.name || ''}
+            onChange={(e) => setClient({ ...client, name: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Instrução do Sistema (Prompt)</label>
+          <textarea 
+            value={client?.prompt || ''}
+            onChange={(e) => setClient({ ...client, prompt: e.target.value })}
+            className="w-full h-64 bg-white/5 border border-white/5 rounded-3xl p-8 text-white text-sm focus:ring-2 focus:ring-primary resize-none leading-relaxed outline-none transition-all"
+            placeholder="Ex: Você é um atendente prestativo da Imobiliária Silva..."
+          />
+        </div>
+        
+        <div className="pt-10 border-t border-white/5">
+          <h4 className="font-black text-sm text-white mb-6 uppercase tracking-[0.2em]">Configuração Meta API (Opcional)</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">WhatsApp Token</label>
+              <input 
+                type="text"
+                value={client?.whatsappToken || ''}
+                onChange={(e) => setClient({ ...client, whatsappToken: e.target.value })}
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-xs text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="EAAG..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Phone Number ID</label>
+              <input 
+                type="text"
+                value={client?.whatsappPhoneNumberId || ''}
+                onChange={(e) => setClient({ ...client, whatsappPhoneNumberId: e.target.value })}
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-xs text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="1092..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Verify Token</label>
+              <input 
+                type="text"
+                value={client?.whatsappVerifyToken || ''}
+                onChange={(e) => setClient({ ...client, whatsappVerifyToken: e.target.value })}
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-xs text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="meu_token_secreto"
+              />
+            </div>
           </div>
         </div>
-      ))}
-    </div>
+
+        <div className="flex gap-4 pt-6">
+          <button 
+            onClick={onSave}
+            className="flex-1 bg-primary text-primary-dark py-5 rounded-3xl font-black shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
+          >
+            Salvar Alterações
+          </button>
+          <button 
+            onClick={onClose}
+            className="px-10 bg-white/5 text-slate-400 py-5 rounded-3xl font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  </div>
+);
+
+const AddClientModal = ({ newClient, setNewClient, onClose, onSave }: any) => (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="bg-[#0F0F0F] w-full max-w-md rounded-[40px] shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden max-h-[90vh] overflow-y-auto"
+    >
+      <div className="p-10 border-b border-white/5 flex justify-between items-center sticky top-0 bg-[#0F0F0F] z-10">
+        <h3 className="font-black text-2xl text-white tracking-tight">Novo Cliente</h3>
+        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-all text-slate-500 hover:text-white"><X size={24} /></button>
+      </div>
+      <div className="p-10 space-y-8">
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Nome da Empresa</label>
+          <input 
+            type="text"
+            value={newClient.name}
+            onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+            placeholder="Ex: Clínica Sorriso"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Regra Inicial (Opcional)</label>
+          <textarea 
+            value={newClient.prompt}
+            onChange={(e) => setNewClient({ ...newClient, prompt: e.target.value })}
+            className="w-full h-40 bg-white/5 border border-white/5 rounded-3xl p-6 text-sm text-white focus:ring-2 focus:ring-primary outline-none transition-all resize-none leading-relaxed"
+            placeholder="Como a IA deve responder?"
+          />
+        </div>
+        <div className="pt-8 border-t border-white/5">
+          <h4 className="font-black text-xs text-white mb-6 uppercase tracking-[0.2em]">Configuração Meta API (Opcional)</h4>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">WhatsApp Token</label>
+              <input 
+                type="text"
+                value={newClient.whatsappToken || ''}
+                onChange={(e) => setNewClient({ ...newClient, whatsappToken: e.target.value })}
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-xs text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="EAAG..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Phone Number ID</label>
+              <input 
+                type="text"
+                value={newClient.whatsappPhoneNumberId || ''}
+                onChange={(e) => setNewClient({ ...newClient, whatsappPhoneNumberId: e.target.value })}
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-xs text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="1092..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Verify Token</label>
+              <input 
+                type="text"
+                value={newClient.whatsappVerifyToken || ''}
+                onChange={(e) => setNewClient({ ...newClient, whatsappVerifyToken: e.target.value })}
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-xs text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="meu_token_secreto"
+              />
+            </div>
+          </div>
+        </div>
+        <button 
+          onClick={onSave}
+          className="w-full bg-primary text-primary-dark py-5 rounded-3xl font-black shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
+        >
+          Criar Cliente
+        </button>
+      </div>
+    </motion.div>
   </div>
 );
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'dashboard'>('landing');
+  return <Dashboard />;
+}
 
-  if (view === 'dashboard') {
-    return <Dashboard onBack={() => setView('landing')} />;
-  }
+const Dashboard = () => {
+  const [activeTab, setActiveTab] = useState('numbers');
+  const [clients, setClients] = useState<any[]>([]);
+  const [flows, setFlows] = useState<any[]>([]);
+  const [team, setTeam] = useState<any[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [configStatus, setConfigStatus] = useState<any>(null);
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [isAddingClient, setIsAddingClient] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
+  const [newClient, setNewClient] = useState({ name: '', prompt: '', whatsappToken: '', whatsappPhoneNumberId: '', whatsappVerifyToken: '' });
+  
+  const [isAddingFlow, setIsAddingFlow] = useState(false);
+  const [editingFlow, setEditingFlow] = useState<any>(null);
+  const [newFlow, setNewFlow] = useState({ name: '', clientId: '', triggers: '' });
+
+  const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<any>(null);
+  const [newTeam, setNewTeam] = useState({ name: '', email: '', role: 'Atendente' });
+
+  const [geminiKeySet, setGeminiKeySet] = useState(true);
+
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('/api/debug/whatsapp');
+      const data = await response.json();
+      setClients(data.clients || []);
+      setGeminiKeySet(data.geminiKeySet);
+      if (data.clients && data.clients.length > 0 && !selectedClientId) {
+        setSelectedClientId(data.clients[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  };
+
+  const fetchFlows = async () => {
+    try {
+      const res = await fetch('/api/flows');
+      const data = await res.json();
+      setFlows(data);
+    } catch (e) {
+      console.error("Error fetching flows", e);
+    }
+  };
+
+  const fetchTeam = async () => {
+    try {
+      const res = await fetch('/api/team');
+      const data = await res.json();
+      setTeam(data);
+    } catch (e) {
+      console.error("Error fetching team", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+    fetchFlows();
+    fetchTeam();
+    const interval = setInterval(() => {
+      fetchClients();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAddClient = async () => {
+    if (!newClient.name) return;
+    try {
+      await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newClient)
+      });
+      setIsAddingClient(false);
+      setNewClient({ name: '', prompt: '', whatsappToken: '', whatsappPhoneNumberId: '', whatsappVerifyToken: '' });
+      fetchClients();
+    } catch (error) {
+      console.error('Error adding client:', error);
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+    try {
+      await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+      fetchClients();
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    }
+  };
+
+  const handleUpdateClient = async () => {
+    if (!editingClient) return;
+    try {
+      await fetch(`/api/clients/${editingClient.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingClient)
+      });
+      setEditingClient(null);
+      setIsEditingPrompt(false);
+      fetchClients();
+    } catch (error) {
+      console.error('Error updating client:', error);
+    }
+  };
+
+  const handleAddFlow = async () => {
+    try {
+      const res = await fetch('/api/flows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newFlow)
+      });
+      if (res.ok) {
+        setIsAddingFlow(false);
+        setNewFlow({ name: '', clientId: '', triggers: '' });
+        fetchFlows();
+      }
+    } catch (e) {
+      console.error("Error adding flow", e);
+    }
+  };
+
+  const handleUpdateFlow = async () => {
+    try {
+      const res = await fetch(`/api/flows/${editingFlow.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingFlow)
+      });
+      if (res.ok) {
+        setEditingFlow(null);
+        fetchFlows();
+      }
+    } catch (e) {
+      console.error("Error updating flow", e);
+    }
+  };
+
+  const handleDeleteFlow = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este fluxo?')) return;
+    try {
+      const res = await fetch(`/api/flows/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchFlows();
+    } catch (e) {
+      console.error("Error deleting flow", e);
+    }
+  };
+
+  const handleAddTeam = async () => {
+    try {
+      const res = await fetch('/api/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTeam)
+      });
+      if (res.ok) {
+        setIsAddingTeam(false);
+        setNewTeam({ name: '', email: '', role: 'Atendente' });
+        fetchTeam();
+      }
+    } catch (e) {
+      console.error("Error adding team member", e);
+    }
+  };
+
+  const handleUpdateTeam = async () => {
+    try {
+      const res = await fetch(`/api/team/${editingTeam.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingTeam)
+      });
+      if (res.ok) {
+        setEditingTeam(null);
+        fetchTeam();
+      }
+    } catch (e) {
+      console.error("Error updating team member", e);
+    }
+  };
+
+  const handleDeleteTeam = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este membro?')) return;
+    try {
+      const res = await fetch(`/api/team/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchTeam();
+    } catch (e) {
+      console.error("Error deleting team member", e);
+    }
+  };
+
+  const selectedClient = clients.find((c: any) => c.id === selectedClientId);
 
   return (
-    <div className="min-h-screen selection:bg-primary/30">
-      <Navbar onLogin={() => setView('dashboard')} />
-      <Hero onStart={() => setView('dashboard')} />
-      <Arguments />
-      <Pricing />
-      <Process />
-      <FAQ />
-      <CTA onStart={() => setView('dashboard')} />
-      <Footer />
+    <div className="min-h-screen bg-[#050505] flex text-slate-200">
+      {/* Sidebar */}
+      <div className="w-80 bg-[#0A0A0A] border-r border-white/5 flex flex-col shrink-0">
+        <div className="p-10">
+          <div className="flex items-center gap-4 mb-12">
+            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,204,0,0.3)]">
+              <Zap className="text-primary-dark fill-primary-dark" size={28} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-black tracking-tighter text-white uppercase leading-none">Web17 AI</span>
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mt-1">Intelligence</span>
+            </div>
+          </div>
+          
+          <nav className="space-y-2">
+            {[
+              { id: 'numbers', icon: Smartphone, label: 'Conexões' },
+              { id: 'clients', icon: Users, label: 'Empresas' },
+              { id: 'flows', icon: BrainCircuit, label: 'Fluxos IA' },
+              { id: 'playground', icon: Play, label: 'Playground' },
+              { id: 'team', icon: ShieldCheck, label: 'Equipe' },
+              { id: 'settings', icon: Settings, label: 'Ajustes' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-300 ${
+                  activeTab === item.id 
+                    ? 'bg-primary text-primary-dark shadow-2xl shadow-primary/20 scale-[1.02]' 
+                    : 'text-slate-500 hover:bg-white/5 hover:text-slate-200'
+                }`}
+              >
+                <item.icon size={20} />
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="mt-auto p-10 border-t border-white/5">
+          <div className="bg-white/5 rounded-3xl p-6 border border-white/5 relative overflow-hidden group">
+            <div className="relative z-10">
+              <div className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Plano Atual</div>
+              <div className="text-xl font-black text-white mb-4">Agência Pro</div>
+              <button className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-200">
+                Upgrade
+              </button>
+            </div>
+            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
+          </div>
+          
+          <button className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 mt-6 transition-all">
+            <LogOut size={18} />
+            Sair do Painel
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Top Header */}
+        <header className="h-24 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5 px-10 flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-6">
+            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">
+              {activeTab === 'numbers' ? 'WhatsApp' : activeTab}
+            </h2>
+            <div className="h-8 w-px bg-white/10"></div>
+            <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cloud Core Online</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 bg-white/5 p-2 pr-6 rounded-2xl border border-white/5 hover:bg-white/10 transition-all cursor-pointer">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-dark text-sm font-black shadow-lg shadow-primary/20">FR</div>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-white uppercase tracking-widest">Flávio Ribeiro</span>
+                <span className="text-[10px] font-bold text-slate-500">Admin</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Tab Content */}
+        <main className="flex-1 overflow-y-auto p-10 bg-[#050505]">
+          {!geminiKeySet && (
+            <div className="mb-10 bg-amber-500/5 border border-amber-500/20 p-8 rounded-[40px] flex items-start gap-6 shadow-2xl">
+              <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 shrink-0 shadow-inner shadow-amber-500/20">
+                <AlertCircle size={28} />
+              </div>
+              <div>
+                <h4 className="font-black text-amber-500 mb-2 uppercase tracking-widest text-sm">Gemini API Key Requerida</h4>
+                <p className="text-slate-400 text-sm mb-6 leading-relaxed max-w-2xl">
+                  Para que a IA responda seus clientes, você precisa configurar sua chave de API do Google Gemini nas configurações do projeto.
+                </p>
+                <div className="flex gap-4">
+                  <a 
+                    href="https://aistudio.google.com/app/apikey" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-amber-500 text-black px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20"
+                  >
+                    Obter Chave API <ExternalLink size={14} />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              {activeTab === 'numbers' && (
+                <NumbersTab 
+                  clientsData={{ clients }} 
+                  selectedClientId={selectedClientId} 
+                  setSelectedClientId={setSelectedClientId}
+                  configStatus={configStatus}
+                  fetchClients={fetchClients}
+                />
+              )}
+              {activeTab === 'clients' && (
+                <ClientsTab 
+                  clientsData={{ clients }} 
+                  selectedClientId={selectedClientId} 
+                  setSelectedClientId={setSelectedClientId}
+                  onAdd={() => setIsAddingClient(true)}
+                  onEdit={(client) => { setEditingClient(client); setIsEditingPrompt(true); }}
+                  onDelete={handleDeleteClient}
+                />
+              )}
+              {activeTab === 'flows' && (
+                <FlowsTab 
+                  flows={flows} 
+                  clients={clients} 
+                  onAdd={() => setIsAddingFlow(true)}
+                  onEdit={(flow) => { setEditingFlow(flow); setIsAddingFlow(true); }}
+                  onDelete={handleDeleteFlow}
+                />
+              )}
+              {activeTab === 'playground' && (
+                <PlaygroundTab />
+              )}
+              {activeTab === 'team' && (
+                <TeamTab 
+                  team={team} 
+                  onAdd={() => setIsAddingTeam(true)}
+                  onEdit={(member) => { setEditingTeam(member); setIsAddingTeam(true); }}
+                  onDelete={handleDeleteTeam}
+                />
+              )}
+              {activeTab === 'settings' && <SettingsTab />}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {isEditingPrompt && (
+          <PromptModal 
+            client={editingClient} 
+            onClose={() => { setIsEditingPrompt(false); setEditingClient(null); }} 
+            onSave={handleUpdateClient}
+            setClient={setEditingClient}
+          />
+        )}
+        {isAddingClient && (
+          <AddClientModal 
+            newClient={newClient}
+            setNewClient={setNewClient}
+            onClose={() => setIsAddingClient(false)}
+            onSave={handleAddClient}
+          />
+        )}
+        {isAddingFlow && (
+          <FlowModal 
+            flow={editingFlow || newFlow} 
+            clients={clients}
+            onClose={() => { setIsAddingFlow(false); setEditingFlow(null); }} 
+            onSave={editingFlow ? handleUpdateFlow : handleAddFlow} 
+            setFlow={editingFlow ? setEditingFlow : setNewFlow} 
+          />
+        )}
+        {isAddingTeam && (
+          <TeamModal 
+            member={editingTeam || newTeam} 
+            onClose={() => { setIsAddingTeam(false); setEditingTeam(null); }} 
+            onSave={editingTeam ? handleUpdateTeam : handleAddTeam} 
+            setMember={editingTeam ? setEditingTeam : setNewTeam} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
-}
+};
